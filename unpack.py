@@ -8,7 +8,7 @@ parser.add_argument('file')
 parser.add_argument('-d', dest='debug', action='store_true', default=False)
 parser.add_argument('-b', dest='bitmap', action='store_true', default=False)
 parser.add_argument('-p', dest='outprefix', default='out')
-parser.add_argument('-s', dest='height', type=int, choices=(11,16,32), default=32)
+parser.add_argument('-l', dest='leds', type=int, choices=(11,16,32), default=32)
 args = parser.parse_args()
 
 if args.bitmap:
@@ -23,7 +23,7 @@ try:
 finally:
     f.close()
 
-if args.height > 16:
+if args.leds > 16:
     word = 4
     bits = (19,0,23,1,27,3,31,2,18,4,22,5,26,7,30,6,17,8,21,9,25,11,29,10,16,12,20,13,24,15,28,14)
 else:
@@ -42,16 +42,12 @@ for i in range (count):
     if args.debug:
         print (i, offset, length)
     if args.bitmap:
-        img=Image.new("1", (length, args.height))
-    for m in range(args.height):
+        img=Image.new("1", (length, args.leds))
+    for m in range(args.leds):
         row = []
         for l in range(length):
-            k = (length - 1 - l) * word
-            value = 0
-            for kk in range(word):
-                if offset + k + kk < len(data):
-                    value = value + ord(data[offset + k + kk]) * (1 << (kk * 8))
-            if value & (1 << bits[m]):
+            k = (length - 1 - l) * word + bits[m] / 8
+            if ord(data[offset + k]) & (1 << (bits[m] % 8)):
                 if args.bitmap:
                     img.putpixel((l, m), 1)
                 row.append("#")
