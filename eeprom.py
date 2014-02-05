@@ -1,6 +1,8 @@
 import usb.core
 import usb.util
 from array import array
+import argparse
+import sys
 
 #
 # Chip in question is AT24C04 (or bigger)
@@ -38,7 +40,8 @@ def write_eeprom (addr, data):
         cmd = (addr & 0xc) + 0x70
         msg = [ data[i], data[i+1], data[i+2], data[i+3], 
                (addr & 0xf0), (addr >> 8), 0, cmd]
-        print (msg)
+        if args.debug:
+            print ("ctrl msg:", repr(msg))
         assert device.ctrl_transfer(0x21, 9, 0x200, 0, msg) == len(msg)
         addr += 4
 
@@ -46,6 +49,8 @@ def read_eeprom (addr):
     if (addr & 7) != 0:
         raise "Address must be aligned to 8 bytes"
     msg =  [ 0, 0, 0, 0, (addr & 0xff), (addr >> 8), 0, 0x10 ]
+    if args.debug:
+        print ("ctrl msg:", repr(msg))
     assert device.ctrl_transfer(0x21, 9, 0x200, 0, msg) == len(msg)
     data = read_data_packet()
     #print (repr(data))
@@ -63,8 +68,20 @@ def read_data_packet():
             attempts -= 1
             if e.args == ('Operation timed out',):
                 continue
-    #print repr(data)
+    if args.debug:
+        print ("Read data:", repr(data))
     return data
+
+#
+#
+#
+
+parser = argparse.ArgumentParser(description='Eeprom reader/programmer.')
+parser.add_argument('-w', dest='writefile')
+parser.add_argument('-r', dest='readfile')
+parser.add_argument('-s', dest='size', type=int, choices=(512,1024,2048,4096), default=2048)
+parser.add_argument('-d', dest='debug', action='store_true', default=False)
+args = parser.parse_args()
 
 # find the USB device
 device = usb.core.find(idVendor=VENDOR_ID,
@@ -82,68 +99,44 @@ endpoint = device[0][(0,0)][0]
 try:
     data = device.read(endpoint.bEndpointAddress,
                            endpoint.wMaxPacketSize, timeout=100)
-    print ("discard", repr(data))
+    if args.debug:
+        print ("Discard", repr(data))
 except:
     pass
 
-print (repr(read_eeprom(0)))
+assert len (read_eeprom(0)) == 8
 
-# write
-#msg = [1,2,3,4, 0xf0,0x01,0,0x70]
-#print msg
-#assert device.ctrl_transfer(0x21, 9, 0x200, 0, msg) == len(msg)
-#msg = [5,6,7,8, 0xf0,0x01,0,0x74]
-#print msg
-#assert device.ctrl_transfer(0x21, 9, 0x200, 0, msg) == len(msg)
-#msg = [9,10,11,12, 0xf0,0x01,0,0x78]
-#print msg
-#assert device.ctrl_transfer(0x21, 9, 0x200, 0, msg) == len(msg)
-#msg = [13, 14, 15, 16, 0xf0,0x01,0,0x7c]
-#print msg
-#print 
-#assert device.ctrl_transfer(0x21, 9, 0x200, 0, msg) == len(msg)
+#
+if args.readfile is not None:
+    f=open(args.readfile, "wb")
+    try:
+        for i in range (0, args.size, 8):
+            data = read_eeprom(i)
+            f.write(data)
+            if args.debug:
+                print (i, data)
+            i += 8
+    finally:
+        f.close()
 
-#write_eeprom (0x1e0, [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
-#print (repr(read_eeprom(0x1e0)))
-#print (repr(read_eeprom(0x1e8)))
-
-
-#print (repr(read_eeprom(0x1f0)))
-#print (repr(read_eeprom(0x1f8)))
-#write_eeprom (0x1f0, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
-#print (repr(read_eeprom(0x1f0)))
-#print (repr(read_eeprom(0x1f8)))
-#write_eeprom (0x1f0, [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0])
-
-f=open("out-orig.bin", "rb")
-try:
-    i = 0;
-    while i < 65536:
-        data = f.read(16)
-        if len (data) == 0:
-            break
-        # has to be read first ?
-        read_eeprom(i)
-        print ("before", repr(read_eeprom(i)))
-        write_eeprom (i, [ ord(x) for x in data ])
-        print (i, data)
-        print ("after", repr(read_eeprom(i)))
-        i += 16
-finally:
-    f.close()
-
-print
-f=open("out.bin", "wb")
-
-i = 0;
-while i < 512:
-    data = read_eeprom(i)
-    f.write(data)
-    print (i, data)
-    i += 8
-f.close()
-
-
+#
+if args.writefile is not None:
+    f=open(args.writefile, "rb")
+    try:
+        for i in range (0, args.size, 16):
+            data = f.read(16)
+            if len (data) == 0:
+                break
+            # has to be read first ?
+            read_eeprom(i)
+            if args.debug:
+                print ("Before", repr(read_eeprom(i)))
+            write_eeprom (i, [ ord(x) for x in data ])
+            if args.debug:
+                print (i, data)
+            #print ("After", repr(read_eeprom(i)))
+    finally:
+        f.close()
 
 #ret = device.ctrl_transfer(0x21, 9, 0x200, 0, 9)
 #sret = ''.join([chr(x) for x in ret])

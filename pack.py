@@ -19,3 +19,15 @@ else:
     bits = (0,1,3,2,4,5,7,6,8,9,11,10,12,13,15,14)
 
 print args.file
+for file in args.file:
+    print file
+    img = Image.open(file)
+    for m in range(args.height):
+        row = []
+        print m,
+        for l in range(img.size[0]):
+            if img.getpixel ((l,m)):
+                row.append("#")
+            else:
+                row.append(".")
+        print ("%02d" % m), "".join(row)
