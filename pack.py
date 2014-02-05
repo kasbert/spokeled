@@ -24,7 +24,10 @@ else:
 data = [ 0 for i in range(args.size) ]
 count = len(args.file)
 data[0] = count
-data[1] = 4 #?
+if args.leds > 16:
+    data[1] = 0x4
+else:
+    data[1] = 0xc
 offset = count * 3 + 2
 
 for i in range(count):
@@ -50,14 +53,14 @@ for i in range(count):
                 row.append(".")
         print ("%02d" % m), "".join(row)
     offset = offset + length * word
+if args.debug:
+    print (data)
 data = [ chr(x) for x in data]
 
 if args.binfile is not None:
     f=open(args.binfile, "wb")
     try:
         f.write("".join(data))
-        if args.debug:
-            print ("".join(data))
     finally:
         f.close()
 

@@ -1,32 +1,19 @@
-import usb.core
-import usb.util
-from array import array
-import argparse
-import sys
-
 #
-# Chip in question is AT24C04 (or bigger)
+# Chip in question is AT24C04, 1024 or 2048 kiB
 # 
 # USB programmer vendor_id = 0x1d57, product_id = 0x0005
+# This is identified as some kind of mouse
 #
 # Vendor and product strings are utf-8 encoded, probably in chinese
 # Vendor name: b"'\xe5\x8c\x80\xe4\x88\x80\\u2000\xe4\xb4\x80\xe6\xbc\x80\xe7\x94\x80\xe7\x8c\x80\xe6\x94\x80\xe7\xbc\x80\xe8\x86\x80\xe8\x8e\x82\xe8\x96\x84\xe8\x9e\x86'"
 # Product name: b"'\xe5\x8c\x80\xe4\x88\x80\\u2000\xe4\xb4\x80\xe6\xbc\x80\xe7\x94\x80\xe7\x8c\x80\xe6\x94\x80\xe7\xbc\x80\xe8\x86\x80\xe8\x8e\x82\xe8\x96\x84\xe8\x9e\x86'"
 #
-# Eeprom address
-# 0 contains count of patterns
-# 1 flags ?
-# 2 + n*3 address high byte
-# 3 + n*3 address low byte
-# 4 + n*3 pattern size (50)
-#
-# Bitmap is 50 columns, right to left, each column is 16 bits (2 bytes), low endian first.
-# Bit 0 is bottom and bit 11 is up
-# Bits 2(4) and 3(8), 6(64) and 7(128), 10(0x400) and 11(0x800), 14(0x4000) and 15(0x8000) are swapped
-# Unused bits are set to 1, thus empty is 0xf400
-# 1111x1xx xxxxxxxx
-# ^^  ^^   ^^  ^^    swaoped
 
+import usb.core
+import usb.util
+from array import array
+import argparse
+import sys
 
 VENDOR_ID = 0x1d57
 PRODUCT_ID = 0x0005
@@ -134,20 +121,20 @@ if args.writefile is not None:
             write_eeprom (i, [ ord(x) for x in data ])
             if args.debug:
                 print (i, data)
-            #print ("After", repr(read_eeprom(i)))
     finally:
         f.close()
-
-#ret = device.ctrl_transfer(0x21, 9, 0x200, 0, 9)
-#sret = ''.join([chr(x) for x in ret])
-#print ret
-
-
-#device.write(array)
-#result = device.controlMsg(
-#    usb.ENDPOINT_OUT + usb.TYPE_CLASS + usb.RECIP_INTERFACE,
-#    usb.REQ_SET_CONFIGURATION, buf, value=0x200, timeout=50)
-#if result != len(buf):
-#    raise IOError('pywws.device_libusb.USBDevice.write_data failed')
-
+    f=open(args.writefile, "rb")
+    c = 0
+    read_eeprom(0)
+    try:
+        for i in range (0, args.size, 8):
+            data = f.read(8)
+            if len (data) == 0:
+                break
+            data2 = read_eeprom(i)
+            for j in range(8):
+                assert data2[j] == ord(data[j]), (c + j, data2[j], data[j])
+            c = c + 8
+    finally:
+        f.close()
 

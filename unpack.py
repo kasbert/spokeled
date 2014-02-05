@@ -1,4 +1,26 @@
 #
+# Eeprom addresses:
+# 0 count of patterns
+# 1 flags
+#  bit 2(4) == background led, 
+#  bit 3(8) == led order ? Set with 11 leds, clear with 32 leds
+# 2 + n*3 address high byte
+# 3 + n*3 address low byte
+# 4 + n*3 pattern size
+# 5 + n*3 first pattern
+# 
+# Pattern is n columns, right to left, each column is 16 bits (2 bytes) or 32 bits (4 bytes), low endian.
+
+# 11 Led version
+# bits = (0,1,3,2,4,5,7,6,8,9,11,10,12,13,15,14)
+# Bit 0 is bottom and bit 11 is up
+# Bits 2(4) and 3(8), 6(64) and 7(128), 10(0x400) and 11(0x800), 14(0x4000) and 15(0x8000) are swapped
+# Unused bits are set to 1, thus empty is 0xf400
+# 1111x1xx xxxxxxxx
+# ^^  ^^   ^^  ^^    swapped
+
+# 32 led version
+# bits = (19,0,23,1,27,3,31,2,18,4,22,5,26,7,30,6,17,8,21,9,25,11,29,10,16,12,20,13,24,15,28,14)
 
 import sys
 import argparse
