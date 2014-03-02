@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='Pack spokeled image.')
 parser.add_argument('file', nargs='+')
 parser.add_argument('-d', dest='debug', action='store_true', default=False)
 parser.add_argument('-i', dest='inverse', action='store_true', default=False)
+parser.add_argument('-m', dest='mirror', action='store_true', default=False)
 parser.add_argument('-s', dest='size', type=int, choices=(512,1024,2048,4096), default=2048)
 parser.add_argument('-w', dest='binfile')
 parser.add_argument('-l', dest='leds', type=int, choices=(11,16,32), default=32)
@@ -43,10 +44,14 @@ for i in range(count):
 
     for m in range(args.leds):
         row = []
-        for l in range(length):
+        for l in range(length - 1, -1, -1):
+            k = l * word + bits[m] / 8
+            if args.mirror:
+                l = l
+            else:
+                l = length - l - 1
             if (img.getpixel ((l,m)) != 0) ^ args.inverse:
                 row.append("#")
-                k = (length - 1 - l) * word + bits[m] / 8
                 if offset + k < len(data):
                     data[offset + k] = data[offset + k] | (1 << (bits[m] % 8))
             else:
